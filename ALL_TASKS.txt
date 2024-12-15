@@ -1,0 +1,1285 @@
+import math 
+import numpy as np 
+import matplotlib.pyplot as plt 
+import tkinter as tk
+from tkinter import filedialog, messagebox, ttk
+
+# -------------------------- Signal Processing Functions --------------------------
+def read_signal_from_file(file_path):
+    indices, samples = [], []
+    with open(file_path, 'r') as f:
+        for _ in range(3):  # Skip header lines
+            f.readline()
+        for line in f:
+            values = line.strip().split()
+            if len(values) == 2:
+                indices.append(int(values[0]))
+                samples.append(float(values[1]))
+    return indices, samples
+
+def display_signals(original_signals, result_signal, operation):
+    num_signals = len(original_signals)
+    plt.figure(figsize=(12, 5))
+
+    # Plot original signals
+    for i, signal in enumerate(original_signals):
+        plt.subplot(1, num_signals + 1, i + 1)
+        plt.plot(signal, label=f'Original Signal {i + 1}')
+        plt.title(f'Original Signal {i + 1}')
+        plt.xlabel('Sample Index (n)')
+        plt.ylabel('Amplitude')
+        plt.grid()
+        plt.legend()
+
+    # Plot result signal
+    plt.subplot(1, num_signals + 1, num_signals + 1)
+    plt.plot(result_signal, label=f'Result of {operation}', color='r')
+    plt.title(f'Result of {operation}')
+    plt.xlabel('Sample Index (n)')
+    plt.ylabel('Amplitude')
+    plt.grid()
+    plt.legend()
+
+    plt.tight_layout()
+    plt.show()
+
+def generate_signal(signal_type, amplitude, phase_shift, frequency, sampling_rate, duration=1):
+    t = np.linspace(0, duration, int(sampling_rate * duration), endpoint=False)
+    if signal_type == 'sine':
+        signal = amplitude * np.sin(2 * np.pi * frequency * t + np.radians(phase_shift))
+    elif signal_type == 'cosine':
+        signal = amplitude * np.cos(2 * np.pi * frequency * t + np.radians(phase_shift))
+    return t, signal
+
+# -------------------------- Arithmetic Operations --------------------------
+def add_signals(signals):
+    return sum(signals)
+
+def subtract_signals(signals):
+    return np.abs(signals[0] - sum(signals[1:]))
+
+def multiply_signal(signal, constant):
+    return signal * constant
+
+def square_signal(signal):
+    return signal ** 2
+
+def normalize_signal(signal, to_zero_one=True):
+    if to_zero_one:
+        return (signal - np.min(signal)) / (np.max(signal) - np.min(signal))
+    else:
+        return (2 * (signal - np.min(signal)) / (np.max(signal) - np.min(signal))) - 1
+
+def accumulate_signal(signal):
+    return np.cumsum(signal)
+
+# -------------------------- GUI Functions --------------------------
+def open_signal_file():
+    file_path = filedialog.askopenfilename(title="Select a Signal File")
+    if file_path:
+        indices, samples = read_signal_from_file(file_path)
+        return file_path, indices, samples
+    return None, None, None
+
+def perform_addition():
+    num_files = num_signals_entry.get()
+   
+    if not num_files.isdigit() or int(num_files) < 2:
+        num_files = 2
+    else:
+        num_files = int(num_files)
+    
+    signals = []
+    for _ in range(num_files):
+        file_path, _, samples = open_signal_file()
+        if file_path:
+            signals.append(np.array(samples))
+        else:
+            return  # Exit if any file not selected
+            
+    result_signal = add_signals(signals)
+    display_signals(signals, result_signal, "Addition")
+
+def perform_subtraction():
+    num_files = num_signals_entry.get()
+  
+    if not num_files.isdigit() or int(num_files) < 2:
+        num_files = 2
+    else:
+        num_files = int(num_files)
+
+    file_path1, _, samples1 = open_signal_file()
+    signals = [np.array(samples1)]
+    for _ in range(num_files - 1):
+        file_path, _, samples = open_signal_file()
+        if file_path:
+            signals.append(np.array(samples))
+        else:
+            return  # Exit if any file not selected
+            
+    result_signal = subtract_signals(signals)
+    display_signals(signals, result_signal, "Subtraction")
+
+def perform_multiplication():
+    file_path, _, samples = open_signal_file()
+    if file_path:
+        constant = float(constant_entry.get())
+        result_signal = multiply_signal(np.array(samples), constant)
+        display_signals([np.array(samples)], result_signal, "Multiplication")
+
+def perform_squaring():
+    file_path, _, samples = open_signal_file()
+    if file_path:
+        result_signal = square_signal(np.array(samples))
+        display_signals([np.array(samples)], result_signal, "Squaring")
+
+def perform_normalization():
+    file_path, _, samples = open_signal_file()
+    if file_path:
+        to_zero_one = normalization_choice.get() == "0 to 1"
+        result_signal = normalize_signal(np.array(samples), to_zero_one)
+        display_signals([np.array(samples)], result_signal, "Normalization")
+
+def perform_accumulation():
+    file_path, _, samples = open_signal_file()
+    if file_path:
+        result_signal = accumulate_signal(np.array(samples))
+        display_signals([np.array(samples)], result_signal, "Accumulation")
+
+def generate_and_display_signal(signal_type):
+    try:
+        amplitude = float(amplitude_entry.get())
+        phase_shift = float(phase_entry.get())
+        frequency = float(frequency_entry.get())
+        sampling_rate = float(sampling_rate_entry.get())
+        t, signal = generate_signal(signal_type, amplitude, phase_shift, frequency, sampling_rate)
+
+        display_signal_continuous(t, signal)
+    except ValueError:
+        messagebox.showerror("Input Error", "Please enter valid numerical values.")
+
+
+#task3
+
+def QuantizationTest1(file_name, Your_EncodedValues, Your_QuantizedValues):
+    expectedEncodedValues = []
+    expectedQuantizedValues = []
+    
+    with open(file_name, 'r') as f:
+        for _ in range(3):  
+            f.readline()
+        for line in f:
+            L = line.strip().split()
+            if len(L) == 2:
+                expectedEncodedValues.append(L[0]) 
+                expectedQuantizedValues.append(float(L[1]))
+            else:
+                break
+
+    if len(Your_EncodedValues) != len(expectedEncodedValues) or len(Your_QuantizedValues) != len(expectedQuantizedValues):
+        print("QuantizationTest1 Test case failed, your signal has a different length from the expected one")
+        return
+
+    for i in range(len(Your_EncodedValues)):
+        if Your_EncodedValues[i] != expectedEncodedValues[i]:
+            print("QuantizationTest1 Test case failed, your EncodedValues differ from the expected ones")
+            return
+
+    for i in range(len(expectedQuantizedValues)):
+        if abs(Your_QuantizedValues[i] - expectedQuantizedValues[i]) >= 0.01:
+            print("QuantizationTest1 Test case failed, your QuantizedValues differ from the expected ones")
+            return
+
+    print("QuantizationTest1 Test case passed successfully")
+
+
+def QuantizationTest2(file_name, Your_IntervalIndices, Your_EncodedValues, Your_QuantizedValues, Your_SampledError):
+    expectedIntervalIndices = []
+    expectedEncodedValues = []
+    expectedQuantizedValues = []
+    expectedSampledError = []
+
+   
+    with open(file_name, 'r') as f:
+        for _ in range(3):  
+            next(f)
+        for line in f:
+            parts = line.strip().split(' ')
+            if len(parts) == 4:
+                expectedIntervalIndices.append(int(parts[0]))
+                expectedEncodedValues.append(parts[1])
+                expectedQuantizedValues.append(float(parts[2]))
+                expectedSampledError.append(float(parts[3]))
+            else:
+                break
+
+    
+    expected_lists = [expectedIntervalIndices, expectedEncodedValues, expectedQuantizedValues, expectedSampledError]
+    your_lists = [Your_IntervalIndices, Your_EncodedValues, Your_QuantizedValues, Your_SampledError]
+
+    for i, (your_list, expected_list) in enumerate(zip(your_lists, expected_lists)):
+        if len(your_list) != len(expected_list):
+            print("QuantizationTest2 Test case failed, your signal has different length from the expected one")
+            return
+
+   
+    for i, (your_list, expected_list) in enumerate(zip(your_lists, expected_lists)):
+        for j in range(len(your_list)):
+            if (i == 2 or i == 3): 
+                if abs(your_list[j] - expected_list[j]) >= 0.01:
+                    print(f"QuantizationTest2 Test case failed, your values differ from the expected ones at index {j}")
+                    return
+            else:
+                if your_list[j] != expected_list[j]:
+                    print(f"QuantizationTest2 Test case failed, your values differ from the expected ones at index {j}")
+                    return
+
+    print("QuantizationTest2 Test case passed successfully")
+
+
+def read_signal(filename):
+    """Reads a signal from a file and returns its type, periodicity, and data."""
+    with open(filename, 'r') as f:
+        lines = f.readlines()
+
+   
+    signal_type = int(lines[0].strip())
+    is_periodic = int(lines[1].strip())
+    n1 = int(lines[2].strip())
+
+   
+    data = []
+    if signal_type == 0: 
+        for i in range(3, 3 + n1):
+            _, amplitude = map(float, lines[i].strip().split())
+            data.append(amplitude)
+    else: 
+        for i in range(3, 3 + n1):
+            _, amplitude, phase_shift = map(float, lines[i].strip().split())
+            data.append(amplitude * np.exp(1j * phase_shift))  
+
+    return signal_type, is_periodic, np.array(data)
+
+
+
+def quantize_signal(signal, levels):
+    """Quantizes the signal to a specified number of levels."""
+    min_val = np.min(signal)
+    max_val = np.max(signal)
+    step_size = (max_val - min_val) / levels
+    
+    quantized_signal = np.zeros_like(signal)
+    level_numbers = np.zeros_like(signal, dtype=int)
+    
+    for i, sample in enumerate(signal):
+        level_number = int((sample - min_val) // step_size)
+        level_number = min(level_number, levels - 1)  # Ensure it doesn't exceed max level
+        quantized_value = min_val + level_number * step_size + (step_size / 2)
+        
+        quantized_signal[i] = quantized_value
+        level_numbers[i] = level_number
+
+    quantization_error = quantized_signal-signal 
+    return quantized_signal, quantization_error, level_numbers
+
+
+def quantize_signal_with_bits(signal, levels):
+    """Quantizes the signal to a specified number of levels."""
+    min_val = np.min(signal)
+    max_val = np.max(signal)
+    step_size = (max_val - min_val) / levels
+    
+    quantized_signal = np.zeros_like(signal)
+    level_numbers = np.zeros_like(signal, dtype=int)
+    
+    for i, sample in enumerate(signal):
+        level_number = int((sample - min_val) // step_size)
+        level_number = min(level_number, levels - 1) 
+        quantized_value = min_val + level_number * step_size + (step_size / 2)
+        
+        quantized_signal[i] = quantized_value
+        level_numbers[i] = level_number
+
+    quantization_error = signal - quantized_signal
+    return quantized_signal, quantization_error, level_numbers
+
+
+def encode_signal(level_numbers, bits):
+    """Encodes the level numbers as binary strings."""
+    encoded_signal = [format(level, f'0{bits}b') for level in level_numbers]
+    return encoded_signal
+
+
+
+def clear_frame(frame):
+  
+    for widget in frame.winfo_children():
+        widget.destroy()
+def show_signal_quantization_interface(main_frame):
+ 
+    clear_frame(main_frame)  
+    
+    ttk.Label(main_frame, text="Select Signal File:").grid(row=0, column=0, padx=5, pady=5)
+    file_entry = ttk.Entry(main_frame, width=40)
+    file_entry.grid(row=0, column=1, padx=5, pady=5)
+    file_button = ttk.Button(main_frame, text="Browse", command=lambda: select_file(file_entry))
+    file_button.grid(row=0, column=2, padx=5, pady=5)
+
+    ttk.Label(main_frame, text="Choose Quantization Mode:").grid(row=1, column=0, padx=5, pady=5)
+    choice_var = tk.StringVar(value="Levels")
+    ttk.Radiobutton(main_frame, text="Levels", variable=choice_var, value="Levels").grid(row=1, column=1)
+    ttk.Radiobutton(main_frame, text="Bits", variable=choice_var, value="Bits").grid(row=1, column=2)
+
+  
+    ttk.Label(main_frame, text="Enter Value:").grid(row=2, column=0, padx=5, pady=5)
+    input_value = tk.Entry(main_frame)
+    input_value.grid(row=2, column=1, columnspan=2, padx=5, pady=5)
+
+
+    run_button = ttk.Button(
+        main_frame, text="Run Quantization",
+        command=lambda: run_quantization(file_entry, choice_var, input_value, main_frame)
+    )
+    run_button.grid(row=3, column=0, columnspan=3, padx=5, pady=5)
+
+    # عرض النتائج
+    ttk.Label(main_frame, text="One-based Level/Interval Indices:").grid(row=4, column=0, padx=5, pady=5)
+    result_indices = tk.Text(main_frame, height=5, width=50, state="disabled")
+    result_indices.grid(row=4, column=1, columnspan=2, padx=5, pady=5)
+
+    ttk.Label(main_frame, text="Encoded Signal:").grid(row=5, column=0, padx=5, pady=5)
+    result_encoded = tk.Text(main_frame, height=5, width=50, state="disabled")
+    result_encoded.grid(row=5, column=1, columnspan=2, padx=5, pady=5)
+
+    ttk.Label(main_frame, text="Quantized Signal Data:").grid(row=6, column=0, padx=5, pady=5)
+    result_quantized = tk.Text(main_frame, height=5, width=50, state="disabled")
+    result_quantized.grid(row=6, column=1, columnspan=2, padx=5, pady=5)
+
+    ttk.Label(main_frame, text="Quantization Error:").grid(row=7, column=0, padx=5, pady=5)
+    result_error = tk.Text(main_frame, height=5, width=50, state="disabled")
+    result_error.grid(row=7, column=1, columnspan=2, padx=5, pady=5)
+
+def close_tools_interface(main_frame, root):
+    clear_frame(main_frame) 
+    show_main_interface(root) 
+
+def select_file(file_entry):
+    file_path = filedialog.askopenfilename(title="Select Signal File", filetypes=[("Text Files", "*.txt"), ("All Files", "*.*")])
+    if file_path:
+        file_entry.delete(0, tk.END)
+        file_entry.insert(0, file_path)
+
+def run_quantization(file_entry, choice_var, input_value, main_frame):
+    try:
+        filename = file_entry.get()
+        if not filename:
+            raise ValueError("Please select a file.")
+
+        signal_type, is_periodic, signal_data = read_signal(filename)
+
+        choice = choice_var.get()
+        if choice == "Levels":
+            levels = int(input_value.get())
+            quantized_signal, quantization_error, interval_indices = quantize_signal(signal_data, levels)
+            indices_to_add = interval_indices 
+        elif choice == "Bits":
+            bits = int(input_value.get())
+            levels = 2 ** bits
+            quantized_signal, quantization_error, level_numbers = quantize_signal(signal_data, levels)
+            indices_to_add = level_numbers
+        else:
+            raise ValueError("Invalid input choice!")
+
+        # Encode the zero-based indices
+        bits = int(np.ceil(np.log2(levels)))
+        encoded_signal = encode_signal(indices_to_add, bits)
+
+        # Convert to one-based for display
+        one_based_indices = indices_to_add + 1
+
+        update_result_text(main_frame, 4, one_based_indices)
+        update_result_text(main_frame, 5, encoded_signal)
+        update_result_text(main_frame, 6, quantized_signal)
+        update_result_text(main_frame, 7, quantization_error)
+        QuantizationTest1("E:\\Lab 5\\Task\\Task1\\Task3 Files\\Quan1_Out.txt", encoded_signal, quantized_signal)
+        #QuantizationTest2("E:\\Lab 5\\Task\\Task1\\Task3 Files\\Quan_Out.txt", one_based_indices, encoded_signal, quantized_signal, quantization_error)
+   
+    except Exception as e:
+        messagebox.showerror("Error", str(e))
+
+def update_result_text(main_frame, row, data):
+    """يقوم بتحديث النص في Text widget للنتائج."""
+    result_widget = main_frame.grid_slaves(row=row, column=1)[0]
+    result_widget.config(state="normal")
+    result_widget.delete(1.0, tk.END)
+    result_widget.insert(tk.END, data)
+    result_widget.config(state="disabled")
+def show_main_interface(root):
+
+    main_frame = ttk.Frame(root)
+    main_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+
+def close_tools_interface(main_frame, root):
+   main_frame.destroy()
+   show_main_interface(root) 
+
+
+
+#----------------------------------
+#TASK4
+
+def dft(signal):
+    N = len(signal)
+    output = np.zeros(N, dtype=complex)
+
+    for k in range(N):
+        for n in range(N):
+            angle = -2 * np.pi * k * n / N
+            output[k] += signal[n] * (math.cos(angle) + 1j * math.sin(angle))
+
+    return output
+def open_fileD():
+    """Open file dialog to select a file."""
+    file_path = filedialog.askopenfilename(filetypes=[("Text Files", "*.txt")])
+    print(f"Selected file: {file_path}")  # Debugging message for file selection
+    if file_path:
+        try:
+            sampling_freq = float(sampling_freq_entry.get())
+            option = option_var.get()
+            if option == 'DFT':
+                process_dft(file_path, sampling_freq)
+            elif option == 'IDFT':
+                process_idft(file_path)
+            else:
+                messagebox.showerror("Error", "Invalid option selected.")
+        except ValueError:
+            messagebox.showerror("Input Error", "Please enter a valid sampling frequency.")
+
+
+
+def read_signal_from_fileD(file_path):
+    
+    try:
+        print(f"Attempting to read file: {file_path}")
+        with open(file_path, 'r') as f:
+            signal_type = int(f.readline().strip())  # Signal type
+            is_periodic = int(f.readline().strip())  # Is periodic
+            N1 = int(f.readline().strip())  # Number of samples
+
+            data = []
+            for line in f:
+                # Replace ',' with space and remove 'f' if present
+                cleaned_line = line.strip().replace(',', ' ').replace('f', '').split()
+                data.append([float(x) for x in cleaned_line])  # Convert to float
+
+            print(f"Signal type: {signal_type}, Is periodic: {is_periodic}, N1: {N1}")
+            print(f"Data read: {data[:5]}")  # Print first 5 rows for debugging
+            return signal_type, N1, np.array(data)
+
+    except FileNotFoundError:
+        messagebox.showerror("File Error", f"File not found: {file_path}")
+        raise
+
+    except ValueError as e:
+        messagebox.showerror("Format Error", f"Error reading file: {e}")
+        raise
+
+def calculate_amplitude_and_phase(dft_result):
+    """Calculates amplitude and phase shift from DFT results with correct amplitude scaling."""
+    N = len(dft_result)
+    amplitude = np.zeros(N)
+    phase = np.zeros(N)  
+
+    for i in range(N):
+        real_part = dft_result[i].real
+        imag_part = dft_result[i].imag
+
+        # Compute magnitude (amplitude)
+        amplitude[i] = (real_part ** 2 + imag_part ** 2) ** 0.5
+
+        if i != 0 and (i != N // 2 or N % 2 != 0): 
+            amplitude[i] *= 2
+
+        # Normalize DC component amplitude
+        if i == 0:
+            amplitude[i] /= N
+
+        # Compute phase shift
+        phase[i] = math.atan2(imag_part, real_part)
+    
+    return amplitude, phase
+
+
+
+def idft_from_amplitude_and_phase(amplitude, phase):
+    """Reconstructs the time-domain signal from amplitude and phase."""
+    N = len(amplitude)
+    time_signal = np.zeros(N, dtype=complex)
+
+    for n in range(N):
+        for k in range(N):
+            time_signal[n] += amplitude[k] * np.exp(1j * (phase[k] + (2 * np.pi * k * n / N)))
+    
+    return time_signal / N  
+
+
+def plot_frequency_domain(amplitude, phase, frequency_entry):
+    """Plots amplitude and phase spectra."""
+    N = len(amplitude)
+    freqs = np.fft.fftfreq(N, d=1/frequency_entry)
+
+    plt.figure(figsize=(12, 6))
+    plt.subplot(2, 1, 1)
+    plt.stem(freqs[:N // 2], amplitude[:N // 2], 'b', markerfmt=" ", basefmt="-b")  
+    plt.title("Frequency vs Amplitude")
+    plt.xlabel("Frequency (Hz)")
+    plt.ylabel("Amplitude")
+    plt.grid()
+
+    plt.subplot(2, 1, 2)
+    plt.stem(freqs[:N // 2], phase[:N // 2], 'r', markerfmt=" ", basefmt="-r") 
+    plt.title("Frequency vs Phase")
+    plt.xlabel("Frequency (Hz)")
+    plt.ylabel("Phase (radians)")
+    plt.grid()
+    plt.tight_layout()
+    plt.show()
+
+def process_dft(file_path, sampling_freq):
+    """Processes the signal using DFT."""
+    signal_type, N1, data = read_signal_from_fileD(file_path)
+    
+    if signal_type == 0:  
+        if data.shape[0] >= N1:
+            time_signal = data[:N1, 0]  # Only use the first column if there's more than one column
+        else:
+            messagebox.showerror("Error", "The number of samples in the file is less than specified.")
+            return
+
+        dft_result = dft(time_signal)
+        amplitude, phase = calculate_amplitude_and_phase(dft_result)
+        plot_frequency_domain(amplitude, phase, sampling_freq)
+    else:
+        messagebox.showerror("Error", "Invalid signal type in file.")
+
+def process_idft(file_path):
+    """Processes the signal using IDFT."""
+    signal_type, N1, data = read_signal_from_fileD(file_path)
+    if signal_type == 0:  # Time domain
+        amplitude = data[:, 0]
+        phase = data[:, 1]
+        reconstructed_signal = idft_from_amplitude_and_phase(amplitude, phase)
+
+        output_text = "\nIndex | Reconstructed Signal Value\n"
+        output_text += "-----------------------------------\n"
+        for index, value in enumerate(reconstructed_signal):
+            output_text += f"{index:<5} | {value.real:<25.6f}\n"  # Real part only
+
+        messagebox.showinfo("Reconstructed Signal", output_text)
+    else:
+        messagebox.showerror("Error", "Invalid signal type in file.")
+
+
+
+
+
+def process_selection():
+    """Handles the selection of DFT or IDFT and opens a file dialog."""
+    file_path = filedialog.askopenfilename(filetypes=[("Text Files", "*.txt")])
+    if not file_path:
+        messagebox.showerror("File Selection Error", "No file was selected.")
+        return
+
+    try:
+        sampling_freq = float(frequency_entry.get())
+        option = option_var.get()
+
+        if option == 'DFT':
+            process_dft(file_path, sampling_freq)
+        elif option == 'IDFT':
+            process_idft(file_path)
+        else:
+            messagebox.showerror("Error", "Invalid option selected.")
+    except ValueError:
+        messagebox.showerror("Input Error", "Please enter a valid sampling frequency.")
+
+
+#-------------------------------------------------------------
+#TASK5
+
+
+def SignalSamplesAreEqualDCT(file_name, indices, samples):
+    expected_indices = []
+    expected_samples = []
+    with open(file_name, 'r') as f:
+        line = f.readline()
+        line = f.readline()
+        line = f.readline()
+        line = f.readline()
+        while line:
+            L = line.strip()
+            if len(L.split(' ')) == 2:
+                L = line.split(' ')
+                V1 = int(L[0])
+                V2 = float(L[1])
+                expected_indices.append(V1)
+                expected_samples.append(V2)
+                line = f.readline()
+            else:
+                break
+                
+    if len(expected_samples) != len(samples):
+        messagebox.showerror("Error", "Test case failed, your signal has different length from the expected one")
+        return
+    for i in range(len(expected_samples)):
+        if abs(samples[i] - expected_samples[i]) < 0.01:
+            continue
+        else:
+            messagebox.showerror("Error", "Test case failed, your signal has different values from the expected one")
+            return
+    messagebox.showinfo("Success", "Test case passed successfully")
+
+
+def read_signal_dataDCT(file_path):
+    with open(file_path, 'r', encoding='utf-8') as file:
+        signal_type = int(file.readline().strip())
+        is_periodic = int(file.readline().strip())
+        n_samples = int(file.readline().strip())
+        
+        samples = []
+        for _ in range(n_samples):
+            line = file.readline().strip()
+            line = line.replace('Â', '') 
+            line = line.split()
+            try:
+                samples.append([int(line[0]), float(line[1])])
+            except ValueError:
+                print(f"Skipping invalid line: {line}")
+                continue
+
+    return signal_type, is_periodic, samples
+
+
+def compute_dct(signal_amplitudes):
+    N = len(signal_amplitudes)
+    dct_result = np.zeros(N)
+    factor = np.sqrt(2 / N)
+    
+    for k in range(N):
+        sum_value = 0
+        for n in range(N):
+            sum_value += signal_amplitudes[n] * np.cos(np.pi / (4 * N) * (2 * n - 1) * (2 * k - 1))
+        dct_result[k] = factor * sum_value
+    
+    return dct_result
+
+def save_dct_coefficients(dct_result, m, file_name):
+    coefficients_to_save = dct_result[:m]
+    np.savetxt(file_name, coefficients_to_save, header=f"First {m} DCT Coefficients", fmt="%.6f")
+    messagebox.showinfo("Success", f"The first {m} DCT coefficients have been saved to '{file_name}'.")
+
+
+def run_dct_task(dct_frame):
+ 
+    file_label = ttk.Label(dct_frame, text="Enter the signal data file path:")
+    file_label.pack(pady=5)
+    file_entry = ttk.Entry(dct_frame, width=30)
+    file_entry.pack(pady=5)
+
+    def choose_file():
+        file_path = filedialog.askopenfilename(title="Select the signal data file")
+        file_entry.delete(0, tk.END)
+        file_entry.insert(0, file_path)
+
+    choose_file_button = ttk.Button(dct_frame, text="Choose File", command=choose_file)
+    choose_file_button.pack()
+
+    # إدخال عدد المعاملات
+    coeff_label = ttk.Label(dct_frame, text="Enter the number of DCT coefficients to save:")
+    coeff_label.pack(pady=5)
+    coeff_input = ttk.Entry(dct_frame, width=10)
+    coeff_input.pack(pady=5)
+
+    def run_task():
+        try:
+            file_path = file_entry.get()
+            signal_type, is_periodic, samples = read_signal_dataDCT(file_path)
+
+            signal_amplitudes = [row[1] for row in samples]
+            indices = [int(row[0]) for row in samples]
+
+            dct_result = compute_dct(signal_amplitudes)
+            output_file = "DCT_output.txt"
+            SignalSamplesAreEqualDCT(output_file, indices, dct_result)
+
+            m = int(coeff_input.get())
+            save_dct_coefficients(dct_result, m, "DCT_coefficients.txt")
+        except Exception as e:
+            messagebox.showerror("Error", f"An error occurred: {str(e)}")
+
+    run_button = ttk.Button(dct_frame, text="Run", command=run_task)
+    run_button.pack(pady=10)
+#exit dct
+
+signal_data = {}
+
+
+
+
+def read_signal_data5(file_path):
+    with open(file_path, 'r') as file:
+        signal_type = None
+        is_periodic = None
+        n_samples = None
+        samples = []
+
+        for line in file:
+           
+            if line.startswith('#') or not line.strip():
+                continue
+            
+            try:
+                # Try to parse the first few important fields as integers
+                if signal_type is None:
+                    signal_type = int(line.strip())
+                elif is_periodic is None:
+                    is_periodic = int(line.strip())
+                elif n_samples is None:
+                    n_samples = int(line.strip())
+                else:
+                    # Parse the signal sample data (assuming it contains two values per line)
+                    values = [float(val) for val in line.strip().split()]
+                    samples.append(values)
+            except ValueError:
+                # Skip any lines that can't be converted to integers or floats
+                continue
+
+    return signal_type, is_periodic, samples
+
+def load_file():
+    global signal_data
+    file_path = filedialog.askopenfilename(filetypes=[("Text Files", "*.txt")])
+    if file_path:
+        try:
+            signal_type, is_periodic, samples = read_signal_data5(file_path)
+            signal_data = {
+                "signal_type": signal_type,
+                "is_periodic": is_periodic,
+                "n_samples": len(samples),
+                "data": samples
+            }
+            messagebox.showinfo("File Loaded", f"File loaded successfully: {file_path}")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to load file: {e}")
+
+
+def DerivativeSignal():
+    InputSignal = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0, 25.0, 26.0, 27.0, 28.0, 29.0, 30.0, 31.0, 32.0, 33.0, 34.0, 35.0, 36.0, 37.0, 38.0, 39.0, 40.0, 41.0, 42.0, 43.0, 44.0, 45.0, 46.0, 47.0, 48.0, 49.0, 50.0, 51.0, 52.0, 53.0, 54.0, 55.0, 56.0, 57.0, 58.0, 59.0, 60.0, 61.0, 62.0, 63.0, 64.0, 65.0, 66.0, 67.0, 68.0, 69.0, 70.0, 71.0, 72.0, 73.0, 74.0, 75.0, 76.0, 77.0, 78.0, 79.0, 80.0, 81.0, 82.0, 83.0, 84.0, 85.0, 86.0, 87.0, 88.0, 89.0, 90.0, 91.0, 92.0, 93.0, 94.0, 95.0, 96.0, 97.0, 98.0, 99.0, 100.0]
+    expectedOutput_first = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+    expectedOutput_second = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+    FirstDrev = [InputSignal[i] - InputSignal[i - 1] for i in range(1, len(InputSignal))]
+    SecondDrev = [InputSignal[i + 1] - 2 * InputSignal[i] + InputSignal[i - 1] for i in range(1, len(InputSignal) - 1)]
+
+  
+    if len(FirstDrev) != len(expectedOutput_first) or len(SecondDrev) != len(expectedOutput_second):
+        print("Mismatch in length")
+        return
+
+    first = second = True
+    for i in range(len(expectedOutput_first)):
+        if not math.isclose(FirstDrev[i], expectedOutput_first[i], abs_tol=0.01):
+            first = False
+            print("1st derivative wrong")
+            return
+
+    for i in range(len(expectedOutput_second)):
+        if not math.isclose(SecondDrev[i], expectedOutput_second[i], abs_tol=0.01):
+            second = False
+            print("2nd derivative wrong")
+            return
+
+    if first and second:
+        print("Derivative Test case passed successfully")
+    else:
+        print("Derivative Test case failed")
+    return FirstDrev, SecondDrev    
+
+
+
+
+def first_derivative():
+    FirstDrev, SecondDrev = DerivativeSignal()
+    display_result(FirstDrev, "First Derivative")
+    print("First Derivative:")
+    print(FirstDrev)
+
+def second_derivative():
+    FirstDrev, SecondDrev = DerivativeSignal()
+    display_result(SecondDrev, "Second Derivative")
+    print("Second Derivative:")
+    print(SecondDrev)
+
+
+def display_result(result, title):
+    result_window = tk.Toplevel(root)
+    result_window.title(title)
+    ttk.Label(result_window, text=f"{title} Result").pack(pady=10)
+    text_box = tk.Text(result_window, height=20, width=50)
+    text_box.pack(padx=10, pady=10)
+    
+    if isinstance(result[0], list): 
+        formatted_result = [" ".join(map(str, [int(round(val)) for val in row])) for row in result]
+    else: 
+        formatted_result = [str(int(round(value))) for value in result]
+    
+    text_box.insert("1.0", "\n".join(formatted_result))
+    text_box.config(state="disabled")
+
+def fold_signal():
+    folded_data = [[sample[0], signal_data['data'][-(i + 1)][1]] for i, sample in enumerate(signal_data['data'])]
+    
+ 
+    signal_data['folded_data'] = folded_data
+    display_result(folded_data, "Folded Signal")
+
+
+def delay_advance_folded_signal():
+    n = len(signal_data['data'])
+    
+    fold_signal()
+    
+   
+    folded_signal = signal_data['folded_data']
+    
+    k = int(step_entry.get())
+    shifted_signal = []
+    
+    for i in range(n):
+        shifted_index = i + k
+
+        if 0 <= shifted_index < n:
+            shifted_signal.append([folded_signal[shifted_index][0], folded_signal[i][1]])
+        else:
+            folded_index = n - 1 - (abs(shifted_index) % n)
+            shifted_signal.append([folded_signal[folded_index][0], folded_signal[i][1]])
+
+    display_result(shifted_signal, f"Folded and Shifted Signal by {k} Steps")
+
+#---------------TASK6------------
+
+def read_signal_data6(file_path):
+    with open(file_path, 'r') as file:
+        signal_type = None
+        is_periodic = None
+        n_samples = None
+        samples = []
+
+        for line in file:
+            if line.startswith('#') or not line.strip():
+                continue
+
+            try:
+                if signal_type is None:
+                    signal_type = int(line.strip())
+                elif is_periodic is None:
+                    is_periodic = int(line.strip())
+                elif n_samples is None:
+                    n_samples = int(line.strip())
+                else:
+                    values = [float(val) for val in line.strip().split()]
+                    samples.append(values)
+            except ValueError:
+                continue
+
+    return signal_type, is_periodic, samples
+
+def perform_smoothing(signal_type, samples, window_size_var):
+    if signal_type != 0:
+        messagebox.showerror("Error", "Smoothing can only be applied to time-domain signals.")
+        return
+
+    signal = [sample[1] for sample in samples]
+    try:
+        window_size = int(window_size_var.get())
+        smoothed_signal = moving_average(signal, window_size)
+        messagebox.showinfo("Smoothing", f"Smoothed signal:\n{smoothed_signal}")
+    except ValueError as e:
+        messagebox.showerror("Error", f"Invalid window size: {e}")
+
+
+
+
+
+def remove_dc_time_domain(signal):
+    mean_value = np.mean(signal)
+    return [x - mean_value for x in signal]
+
+
+def perform_convolution_task():
+    file1 = browse_file6()
+    if not file1:
+        messagebox.showerror("Error", "No file selected for the first signal.")
+        return
+
+    signal_type1, _, samples1 = read_signal_data6(file1)
+
+    file2 = browse_file6()
+    if not file2:
+        messagebox.showerror("Error", "No file selected for the second signal.")
+        return
+
+    signal_type2, _, samples2 = read_signal_data6(file2)
+
+    if signal_type1 != 0 or signal_type2 != 0:
+        messagebox.showerror("Error", "Convolution can only be performed on time-domain signals.")
+        return
+
+    signal1 = np.array([sample[1] for sample in samples1])
+    signal2 = np.array([sample[1] for sample in samples2])
+    convolved_signal = np.convolve(signal1, signal2, mode='full')
+
+    result_message = "Convolution Result:\n" + "\n".join(map(str, convolved_signal))
+    messagebox.showinfo("Convolution Results", result_message)
+
+def remove_dc_frequency_domain(samples):
+    return [[freq, 0, phase] if freq == 0 else [freq, amp, phase] for freq, amp, phase in samples]
+
+
+def moving_average(signal, window_size):
+    if window_size <= 0:
+        raise ValueError("Window size must be greater than 0")
+    if window_size > len(signal):
+        raise ValueError("Window size cannot be larger than the signal length")
+
+    smoothed_signal = np.convolve(signal, np.ones(window_size) / window_size, mode='valid')
+    indices = list(range(len(smoothed_signal)))
+    #SignalSamplesAreEqual("OutMovAvgTest1.txt", indices, smoothed_signal)
+    SignalSamplesAreEqual("OutMovAvgTest2.txt", indices, smoothed_signal)
+    return smoothed_signal
+
+
+def browse_file6():
+    root = tk.Tk()
+    root.withdraw()
+    file_path = filedialog.askopenfilename(title="Select a signal file",
+                                           filetypes=[("Text Files", "*.txt"), ("All Files", "*.*")])
+    root.destroy()
+    return file_path
+
+
+def normalized_cross_correlation(signal1, signal2):
+    """
+    Compute normalized cross-correlation of two signals using the direct method.
+    """
+    if len(signal1) != len(signal2):
+        raise ValueError("Signals must be of the same length")
+
+    N = len(signal1)
+    r12 = np.zeros(N)
+
+    # Compute the cross-correlation
+    for i in range(N):
+        r12[i] = sum(signal1[k] * signal2[(k + i) % N] for k in range(N))
+
+    # Normalize the cross-correlation
+    norm_factor = np.sqrt(sum(signal1[j] ** 2 for j in range(N)) * sum(signal2[j] ** 2 for j in range(N)))
+    if norm_factor == 0:
+        raise ValueError("Normalization factor is zero. Signals may have zero variance.")
+
+    pr12 = r12 / norm_factor
+    lags = np.arange(0, N)
+  
+
+    return lags, pr12
+
+def Compare_Signals6(file_name,Your_indices,Your_samples):      
+    expected_indices=[]
+    expected_samples=[]
+    with open(file_name, 'r') as f:
+        line = f.readline()
+        line = f.readline()
+        line = f.readline()
+        line = f.readline()
+        while line:
+            # process line
+            L=line.strip()
+            if len(L.split(' '))==2:
+                L=line.split(' ')
+                V1=int(L[0])
+                V2=float(L[1])
+                expected_indices.append(V1)
+                expected_samples.append(V2)
+                line = f.readline()
+            else:
+                break
+    print("Current Output Test file is: ")
+    print(file_name)
+    print("\n")
+    if (len(expected_samples)!=len(Your_samples)) and (len(expected_indices)!=len(Your_indices)):
+        print("Shift_Fold_Signal Test case failed, your signal have different length from the expected one")
+        return
+    for i in range(len(Your_indices)):
+        if(Your_indices[i]!=expected_indices[i]):
+            print("Shift_Fold_Signal Test case failed, your signal have different indicies from the expected one") 
+            return
+    for i in range(len(expected_samples)):
+        if abs(Your_samples[i] - expected_samples[i]) < 0.01:
+            continue
+        else:
+            print("Correlation Test case failed, your signal have different values from the expected one") 
+            return
+    print("Correlation Test case passed successfully")
+
+
+
+def remove_dc_time_domain(signal):
+    mean_value = np.mean(signal)
+    return [x - mean_value for x in signal]
+
+
+def remove_dc_frequency_domain(samples):
+    return [[freq, 0, phase] if freq == 0 else [freq, amp, phase] for freq, amp, phase in samples]
+
+
+def moving_average(signal, window_size):
+    if window_size <= 0:
+        raise ValueError("Window size must be greater than 0")
+    if window_size > len(signal):
+        raise ValueError("Window size cannot be larger than the signal length")
+
+    smoothed_signal = np.convolve(signal, np.ones(window_size) / window_size, mode='valid')
+    indices = list(range(len(smoothed_signal)))
+    #Compare_Signals6("OutMovAvgTest2.txt",indices,smoothed_signal)
+    Compare_Signals6("OutMovAvgTest1.txt",indices,smoothed_signal)
+    return smoothed_signal
+ 
+
+
+def perform_dc_removal(signal_type, samples):
+    if signal_type == 0:  # Time domain
+        signal = [sample[1] for sample in samples]
+        dc_removed_signal = remove_dc_time_domain(signal)
+        indices = list(range(len(dc_removed_signal)))
+        Compare_Signals6("DC_component_output.txt",indices,dc_removed_signal)
+        messagebox.showinfo("DC Removal", f"Time-domain DC component removed.\n{dc_removed_signal}")
+    else:  # Frequency domain
+        dc_removed_signal = remove_dc_frequency_domain(samples)
+        indices = list(range(len(dc_removed_signal)))
+        Compare_Signals6("DC_component_output.txt",indices,dc_removed_signal)
+        messagebox.showinfo("DC Removal", f"Frequency-domain DC component removed.\n{dc_removed_signal}")
+
+
+
+
+def perform_correlation_task():
+    """
+    Perform normalized cross-correlation between two signals.
+    """
+    file1 = browse_file6()
+    if not file1:
+        messagebox.showerror("Error", "No file selected for the first signal.")
+        return
+    signal_type1, _, samples1 = read_signal_data6(file1)
+
+    file2 = browse_file6()
+    if not file2:
+        messagebox.showerror("Error", "No file selected for the second signal.")
+        return
+    signal_type2, _, samples2 = read_signal_data6(file2)
+
+    if signal_type1 != 0 or signal_type2 != 0:
+        messagebox.showerror("Error", "Correlation can only be performed on time-domain signals.")
+        return
+
+    # Extract signal amplitudes
+    signal1 = np.array([sample[1] for sample in samples1])
+    signal2 = np.array([sample[1] for sample in samples2])
+
+    try:
+        # Perform the correlation
+        lags, cross_correlation = normalized_cross_correlation(signal1, signal2)
+   
+        # Prepare results for display
+        result_message = "Normalized Cross-Correlation:\n"
+        for lag, value in zip(lags, cross_correlation):
+            result_message += f"{lag}: {value:.8f}\n"
+
+        # Display results
+        messagebox.showinfo("Correlation Results", result_message)
+   
+    except ValueError as e:
+        messagebox.showerror("Error", f"Error in computing correlation: {e}")
+    Compare_Signals6("CorrOutput.txt",lags, cross_correlation )    
+
+
+
+
+def choose_file_task6(task_function):
+    file_path = browse_file6()
+    if not file_path:
+        messagebox.showerror("Error", "No file selected.")
+        return
+
+    signal_type, _, samples = read_signal_data6(file_path)
+    task_function(signal_type, samples)
+
+
+
+# -------------------------- GUI --------------------------
+root = tk.Tk()
+root.title("Signal Processing Framework")
+root.geometry("900x800")
+
+# Menu Bar
+menu_bar = tk.Menu(root)
+
+#-------------TASK1-----------------------------
+# Signal Generation Menu
+signal_generation_menu = tk.Menu(menu_bar, tearoff=0)
+signal_generation_menu.add_command(label="Generate Sine Wave", command=lambda: generate_and_display_signal('sine'))
+signal_generation_menu.add_command(label="Generate Cosine Wave", command=lambda: generate_and_display_signal('cosine'))
+menu_bar.add_cascade(label="Signal Generation_TASK1", menu=signal_generation_menu)
+
+
+
+#-------------TASK2-----------------------------
+# Arithmetic Operations Menu
+arithmetic_menu = tk.Menu(menu_bar, tearoff=0)
+arithmetic_menu.add_command(label="Addition", command=perform_addition)
+arithmetic_menu.add_command(label="Subtraction", command=perform_subtraction)
+arithmetic_menu.add_command(label="Multiplication", command=perform_multiplication)
+arithmetic_menu.add_command(label="Squaring", command=perform_squaring)
+arithmetic_menu.add_command(label="Normalization", command=perform_normalization)
+arithmetic_menu.add_command(label="Accumulation", command=perform_accumulation)
+menu_bar.add_cascade(label="Arithmetic Operations_TASK2", menu=arithmetic_menu)
+
+#-------------TASK5_DCT-----------------------------
+# Apply the menu bar to the root window
+root.config(menu=menu_bar)
+dct_frame = ttk.Frame(root, width=100)
+dct_frame.pack(side=tk.LEFT, fill=tk.BOTH, padx=5, pady=5)
+run_dct_task(dct_frame)
+
+
+
+#------------------------------------
+main_frame = ttk.Frame(root)
+main_frame.pack(fill=tk.BOTH, expand=False, padx=5, pady=5)
+
+
+
+#-------------TASK3-----------------------------
+tools_menu = tk.Menu(menu_bar, tearoff=0)
+menu_bar.add_cascade(label="Tools_TASK3", menu=tools_menu)
+tools_menu.add_command(label="Signal Quantization", command=lambda: show_signal_quantization_interface(main_frame))
+tools_menu.add_command(label="Exit", command=lambda: close_tools_interface(main_frame, root))
+
+
+
+
+
+
+# Configure Grid Layout
+main_frame.columnconfigure(0, weight=1)  # Left column
+main_frame.columnconfigure(1, weight=1)  # Right column
+
+
+
+
+
+#-------------TASK5-----------------------------
+# Sharpening 
+operations_frame = ttk.LabelFrame(main_frame, text="TASK_5", padding=10)
+operations_frame.grid(row=1, column=0, sticky="nsew", padx=5, pady=5)
+
+# File Management 
+file_frame = ttk.LabelFrame(operations_frame, text="File Management", padding=10)
+file_frame.pack(fill="x", padx=5, pady=5)
+ttk.Button(file_frame, text="Load Signal File",  command=load_file).pack(pady=5)
+
+# Sharpening Operations Section
+sharpening_frame = ttk.LabelFrame(operations_frame, text="Sharpening Operations", padding=10)
+sharpening_frame.pack(fill="x", padx=5, pady=5)
+ttk.Button(sharpening_frame, text="Compute First Derivative",command=first_derivative).pack(side="left", padx=5, pady=5)
+ttk.Button(sharpening_frame, text="Compute Second Derivative",  command=second_derivative).pack(side="left", padx=5, pady=5)
+
+# Delay/Advance Operations Section
+delay_frame = ttk.LabelFrame(operations_frame, text="Delay/Advance Operations", padding=10)
+delay_frame.pack(fill="x", padx=5, pady=5)
+ttk.Label(delay_frame, text="Steps (k):").pack(side="left", padx=5)
+step_entry = ttk.Entry(delay_frame, width=5)
+step_entry.pack(side="left", padx=5)
+ttk.Button(delay_frame, text="Delay/Advance Signal", command=delay_advance_folded_signal).pack(side="left", padx=10)
+
+# Folding Operations Section
+folding_frame = ttk.LabelFrame(operations_frame, text="Folding Operations", padding=10)
+folding_frame.pack(fill="x", padx=5, pady=5)
+ttk.Button(folding_frame, text="Fold Signal", command=fold_signal).pack(pady=5)
+
+
+
+#-----------------------------------------------------------------------
+
+# Signal Input Parameters Section 
+input_frame = ttk.LabelFrame(main_frame, text="Signal Input Parameters", padding=10)
+input_frame.grid(row=1, column=1, sticky="nsew", padx=5, pady=5)
+ttk.Label(input_frame, text="Amplitude (A):").pack(pady=5)
+amplitude_entry = ttk.Entry(input_frame)
+amplitude_entry.pack(pady=5)
+ttk.Label(input_frame, text="Phase Shift (θ in degrees):").pack(pady=5)
+phase_entry = ttk.Entry(input_frame)
+phase_entry.pack(pady=5)
+ttk.Label(input_frame, text="Frequency (Hz):").pack(pady=5)
+frequency_entry = ttk.Entry(input_frame)
+frequency_entry.pack(pady=5)
+ttk.Label(input_frame, text="Sampling Rate (Hz):").pack(pady=5)
+sampling_rate_entry = ttk.Entry(input_frame)
+sampling_rate_entry.pack(pady=5)
+ttk.Label(input_frame, text="Number of Signals for Operations:").pack(pady=5)
+num_signals_entry = ttk.Entry(input_frame)
+num_signals_entry.pack(pady=5)
+ttk.Label(input_frame, text="Constant for Multiplication:").pack(pady=5)
+constant_entry = ttk.Entry(input_frame)
+constant_entry.pack(pady=5)
+ttk.Label(input_frame, text="Normalization Choice:").pack(pady=5)
+normalization_choice = ttk.Combobox(input_frame, values=["0 to 1", "-1 to 1"])
+normalization_choice.set("0 to 1")
+normalization_choice.pack(pady=5)
+
+
+
+#-------------TASK6-----------------------------
+# Task 6 
+task6_frame = ttk.LabelFrame(main_frame, text="Task6_Operations", padding=10)
+task6_frame.grid(row=2, column=0, columnspan=2, sticky="nsew", padx=5, pady=5)
+
+# Buttons for Task 6 Operations
+ttk.Button(task6_frame, text="Remove DC Component", command=lambda: choose_file_task6(perform_dc_removal),).pack(pady=5)
+ttk.Button(task6_frame, text="Perform Smoothing", 
+           command=lambda: choose_file_task6(lambda st, sm: perform_smoothing(st, sm, window_size_var)),).pack(pady=5)
+ttk.Button(task6_frame, text="Convolve Two Signals", command=perform_convolution_task).pack(pady=5)
+ttk.Button(task6_frame, text="Compute Cross-Correlation", command=perform_correlation_task).pack(pady=5)
+
+# Window size for smoothing
+ttk.Label(task6_frame, text="Enter window size for smoothing:").pack(pady=5)
+window_size_var = tk.StringVar(value="3")  # Default value
+ttk.Entry(task6_frame, textvariable=window_size_var, width=10).pack(pady=5)
+
+
+
+
+#-------------TASK4-----------------------------
+# Options Section (Inside Operations Frame)_TASK4
+options_section = ttk.LabelFrame(operations_frame, text="Frequency Options_TASK4", padding=10)
+options_section.pack(fill="x", padx=5, pady=5)
+
+option_var = tk.StringVar(value="DFT") 
+ttk.Radiobutton(options_section, text="DFT", variable=option_var, value='DFT', command=process_selection).pack(side="left", padx=10, pady=5)
+ttk.Radiobutton(options_section, text="IDFT", variable=option_var, value='IDFT', command=process_selection).pack(side="left", padx=10, pady=5)
+
+#[--------------------------------------------------------]
+
+
+# Start the GUI main loop
+root.mainloop()
