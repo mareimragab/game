@@ -1,7 +1,7 @@
 print (1)
 <<<<<<< HEAD
 print (4)
-fun(x,y)
+fun33(x,y)
 {
 return x+y;
 }
